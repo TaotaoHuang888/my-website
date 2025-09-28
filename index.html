@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Signature Payroll — Bilingual Site (No-Build Single File)</title>
+  <style>
+    :root{
+      --bg:#f3f4f6; --ink:#111827; --muted:#4b5563;
+      --card:#ffffff; --line:#e5e7eb; --brand:#000000;
+      --blue:#1d4ed8; --blue-50:#eff6ff; --blue-200:#bfdbfe;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);
+      font:16px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans',sans-serif}
+    .wrap{max-width:1120px;margin:0 auto;padding:24px 16px}
+    header{display:flex;align-items:center;justify-content:space-between;padding-top:8px}
+    header .brand{display:flex;gap:12px;align-items:center}
+    header .brand img{height:42px;width:auto;display:none}
+    .btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:600}
+    nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .navbtn{padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+    .navbtn.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+    h1,h2,h3{margin:0 0 8px}
+    h2{font-size:22px}
+    .section{margin:28px 0}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .grid{display:grid;gap:16px}
+    @media(min-width:768px){
+      .grid.cols-2{grid-template-columns:1fr 1fr}
+      .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+      .grid.cols-4{grid-template-columns:repeat(4,1fr)}
+    }
+    .muted{color:var(--muted)}
+    .center{display:flex;align-items:center;justify-content:center}
+    .pill{display:inline-block;border:1px solid var(--blue-200);background:var(--blue-50);color:var(--blue);border-radius:999px;padding:4px 10px;font-size:12px;margin:4px 6px 0 0}
+    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+    .kpi>div{border:1px solid var(--line);background:#fafafa;border-radius:10px;padding:10px;text-align:center}
+    .kpi .v{font-weight:800;font-size:18px}
+    .list-check{padding-left:22px}
+    .list-check li{list-style:none;position:relative;margin:6px 0}
+    /* 使用 unicode 转义，避免某些环境对直写字符解析异常 */
+    .list-check li::before{content:"\2713";position:absolute;left:-22px;top:0}
+    .list-arrow{padding-left:18px}
+    .list-arrow li{list-style:none;position:relative;margin:6px 0}
+    .list-arrow li::before{content:"\2192";position:absolute;left:-18px;top:0;color:var(--muted)}
+    .partners .cell{height:112px}
+    .partners img{max-height:66px;max-width:100%;object-fit:contain}
+    .service-figure{height:140px;border:1px dashed var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fafafa}
+    .service-figure img{max-height:100%;max-width:100%;object-fit:contain}
+    footer{background:#fff;border-top:1px solid var(--line);margin-top:32px}
+    footer .wrap{display:flex;justify-content:space-between;color:var(--muted);font-size:14px}
+    .inline-note{font-size:12px;color:var(--muted)}
+    code{background:#f5f5f5;border:1px solid #eee;border-radius:6px;padding:0 4px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <!-- Logo：自动从 C:\Users\Public\Pictures\brand\sps-logo.(png|jpg) 读取 -->
+        <img id="brandLogo" alt="Signature Payroll Services" />
+        <strong id="brandText" class="muted" style="display:none">Signature Payroll</strong>
+      </div>
+      <button id="langBtn" class="btn">EN</button>
+    </header>
+
+    <nav id="nav"></nav>
+    <main id="main"></main>
+  </div>
+
+  <footer><div class="wrap"><span id="footerText"></span></div></footer>
+
+  <script>
+  // ================= 基础路径（如移动图片，只改这里） =================
+  const BASE = 'file:///C:/Users/Public/Pictures';
+
+  // 加载候选图片：依次尝试直给的 URL；若未给扩展名，会尝试常见扩展名
+  async function pickImage(candidates){
+    const exts = ['.png','.jpg','.jpeg','.webp','.avif'];
+    const flat = [];
+    for(const c of candidates){
+      if(!c) continue;
+      const hasExt = /\.[a-z0-9]+$/i.test(c);
+      if(hasExt) flat.push(c);
+      else exts.forEach(e=>flat.push(c+e));
+    }
+    for(const raw of flat){
+      const url = encodeURI(raw);
+      const ok = await canLoad(url);
+      if(ok) return url;
+    }
+    return null;
+  }
+  function canLoad(url){
+    return new Promise(res=>{
+      const img=new Image();
+      img.onload=()=>res(true);
+      img.onerror=()=>res(false);
+      img.src=url;
+    });
+  }
+
+  // Header Logo
+  (async function mountBrandLogo(){
+    const logoEl = document.getElementById('brandLogo');
+    const textEl  = document.getElementById('brandText');
+    const ok = await pickImage([`${BASE}/brand/sps-logo.png`, `${BASE}/brand/sps-logo.jpg`]);
+    if(ok){ logoEl.src=ok; logoEl.style.display='inline'; } else { textEl.style.display='inline'; }
+  })();
+
+  // ================= I18N =================
+  const TEXT = {
+    en:{brand:"Signature Payroll",
+      nav:{home:"Home",about:"About Us",services:"Services",success:"Success Stories",news:"News",testimonials:"Testimonials",partners:"Partners",resources:"Resources",recruitment:"Recruitment",contact:"Contact",privacy:"Privacy Policy",terms:"Terms of Use"},
+      hero:{title:"Payroll done right — accurate, compliant, on time.",subtitle:"We design, run and optimise payroll for Australian organisations with bilingual support and audit-ready processes.",
+        cards:[{t:"Accuracy",d:"Robust checks and reconciliations."},{t:"Compliance",d:"Fair Work, STP & Super ready."},{t:"Continuity",d:"Senior consultants, accountable delivery."}]},
+      about:{heading:"About Signature Payroll", leadership:"Leadership Team"},
+      services:{heading:"Our Services"},
+      success:{heading:"Success Stories"},
+      news:{heading:"Latest Industry News"},
+      testimonials:{heading:"What Our Clients Say"},
+      partners:{heading:"Partners (Color Logos)"},
+      resources:{heading:"Resources & Support", support:"Payroll System Support"},
+      recruitment:{heading:"Join Our Team",intro:"Explore open positions below."},
+      contact:{heading:"Contact",intro:"Email admin@signaturepayroll.com.au or send us a message.",form:{name:"Name",email:"Email",msg:"Message",submit:"Send"}},
+      privacy:{heading:"Privacy Policy (Placeholder)",body:"Placeholder per Australian Privacy Principles."},
+      terms:{heading:"Terms of Use (Placeholder)",body:"Use of this site implies lawful use only; content is general information only."},
+      footer:{rights:"All rights reserved."},
+      btn:{expand:"View details",collapse:"Hide details",prev:"Prev",next:"Next"}},
+    zh:{brand:"Signature Payroll",
+      nav:{home:"首页",about:"关于我们",services:"服务",success:"成功案例",news:"新闻",testimonials:"客户证言",partners:"合作伙伴",resources:"资源",recruitment:"招聘",contact:"联系",privacy:"隐私政策",terms:"使用条款"},
+      hero:{title:"严谨、合规、准时 —— 您值得信赖的薪资管理伙伴",subtitle:"为澳洲企业提供端到端薪资服务与优化，支持中英双语交付，流程审计随时可追溯。",
+        cards:[{t:"准确性",d:"严密核对与对账流程。"},{t:"合规性",d:"完全符合 Fair Work、STP 与养老金要求。"},{t:"连续性",d:"由资深顾问负责的稳定交付。"}]},
+      about:{heading:"关于 Signature Payroll", leadership:"管理团队"},
+      services:{heading:"服务范围"},
+      success:{heading:"成功案例"},
+      news:{heading:"最新行业新闻"},
+      testimonials:{heading:"客户怎么说"},
+      partners:{heading:"合作伙伴（彩色 Logo）"},
+      resources:{heading:"资源与支持", support:"薪资系统支持"},
+      recruitment:{heading:"加入我们",intro:"欢迎浏览开放岗位并投递简历。"},
+      contact:{heading:"联系",intro:"发送邮件至 admin@signaturepayroll.com.au，或在线留言。",form:{name:"姓名",email:"邮箱",msg:"留言内容",submit:"发送"}},
+      privacy:{heading:"隐私政策（占位）",body:"遵循澳大利亚隐私原则的占位文本。"},
+      terms:{heading:"使用条款（占位）",body:"仅可依法使用本站；内容仅供一般信息参考。"},
+      footer:{rights:"版权所有"},
+      btn:{expand:"查看常见问题",collapse:"收起",prev:"上一页",next:"下一页"}}
+  };
+
+  // ================= About / Team =================
+  const ABOUT_EN=[ "About Signature Payroll Services Pty Ltd (SPS)",
+    "SPS acquires and operates your payroll function to deliver long-term service excellence through a specialist provider.",
+    "We are a boutique payroll consultancy and outsourcing firm built on precision, discretion, and a commitment to full-function payroll delivery.",
+    "We are not transactional processors—we are strategic partners. We deliver with an experienced team, ensuring responsiveness, accuracy, and continuity.",
+    "With 45+ years of combined payroll expertise, we provide a premium service experience that goes far beyond basic processing.",
+    "Full Ownership of Payroll Operations — We manage the end-to-end payroll lifecycle so you can operate without internal payroll headcount. Our team becomes your team."];
+  const ABOUT_ZH=[ "关于 Signature Payroll Services Pty Ltd (SPS)",
+    "SPS 通过专业化团队接管并运行企业的薪资职能，以实现长期、稳定且高质量的服务体验。",
+    "我们是一家精品薪资咨询与外包公司，坚持以精准、谨慎与全功能交付为核心。",
+    "我们不是事务性处理者，而是战略合作伙伴。资深团队交付，确保响应、准确与连续性。",
+    "凭借 45+ 年综合经验，我们提供远高于基础处理的高端服务体验。",
+    "全权运营薪资流程——由我们管理端到端生命周期，企业无需配置内部薪资人员。我们的团队就是你的团队。"];
+
+  const LEADS_EN=[
+    {name:"Kathy De Luca",title:"Senior Executive & Strategic Leader",blurb:"20+ years leading high-performing teams. Known for transforming service delivery and driving organisational excellence.", photoCandidates:[`${BASE}/people/JH1_7145.jpg`,`${BASE}/people/JH1_7003.jpg`]},
+    {name:"Vivien Huang",title:"Payroll & Compliance Expert",blurb:"25+ years in Australian payroll legislation, HR operations, and compliance. Trusted mentor and team builder; strong in troubleshooting.", photoCandidates:[`${BASE}/people/JH1_7003.jpg`,`${BASE}/people/JH1_6862 (1).jpg`]}
+  ];
+  const LEADS_ZH=[
+    {name:"Kathy De Luca",title:"高级管理者与战略领导者",blurb:"20 余年领导高绩效团队经验。擅长重塑服务交付并推动组织卓越。", photoCandidates:[`${BASE}/people/JH1_7145.jpg`,`${BASE}/people/JH1_7003.jpg`]},
+    {name:"Vivien Huang",title:"薪资与合规专家",blurb:"25+ 年澳洲薪资立法、HR 运营与合规经验。值得信赖的导师与团队建设者，技术问题定位与修复能力强。", photoCandidates:[`${BASE}/people/JH1_7003.jpg`,`${BASE}/people/JH1_6862 (1).jpg`]}
+  ];
+
+  // ================= Services =================
+  const SERVICES_EN=[
+    {title:"Payroll Outsourcing Services",sub:"Premium, Discreet, Delivered",imgCandidates:[`${BASE}/service/payroll service picture.avif`,`${BASE}/service/Payroll services picture`,`${BASE}/service/Payroll services pictures`],
+      bullets:["Full-function payroll across all pay cycles, awards and employment types","Direct access to senior consultants","Continuous improvement and integrations","Compliance management & audit-ready documentation","24/7 support and monitoring"]},
+    {title:"Payroll Project Consulting",sub:"Implementation & Optimisation",imgCandidates:[`${BASE}/service/Payroll project service picture`,`${BASE}/service/Project services picture`],
+      bullets:["Implementations, migrations and upgrades","Compliance reviews & risk assessments","M&A / restructure support","Process & reporting redesign","Change management & capability uplift"]},
+    {title:"Payroll Recruitment",sub:"Specialised Talent Acquisition",imgCandidates:[`${BASE}/service/Recruitment service picture`],
+      bullets:["Hiring for payroll professionals","Contract & permanent placements","Role scoping & cultural fit","Industry network & references","Onboarding support and mentoring"]}
+  ];
+  const SERVICES_ZH=[
+    {title:"薪资外包服务",sub:"高标准、谨慎、可交付",imgCandidates:[`${BASE}/service/payroll service picture.avif`,`${BASE}/service/Payroll services picture`,`${BASE}/service/Payroll services pictures`],
+      bullets:["覆盖全部支付周期/奖酬/用工类型的全功能薪资","直通资深顾问，减少沟通层级与延迟","持续优化与系统集成/迁移支持","合规管理与审计就绪文档","7×24 小时支持与监控"]},
+    {title:"薪资项目咨询",sub:"实施落地与优化提升",imgCandidates:[`${BASE}/service/Payroll project service picture`,`${BASE}/service/Project services picture`],
+      bullets:["系统实施、迁移与升级","合规审查与风险评估","并购/重组期间的支持","流程与报表重构","变更管理与能力提升"]},
+    {title:"薪资招聘",sub:"薪资领域人才获取",imgCandidates:[`${BASE}/service/Recruitment service picture`],
+      bullets:["薪资岗位的专业招聘","合同制与长期岗位","职位定范围与文化契合","行业网络与背调","入职支持与导师辅导"]}
+  ];
+
+  // ================= Success Stories / News / Testimonials（略同上版本） =================
+  const SUCCESS_EN=[
+    {t:"Three-Year Government Partnership",s:"Partnered with a major government department for three years. Built processes, documentation and controls; participated in external audits. Shifted from meeting expectations to setting the benchmark.",m:[["Contract","3 Years"],["Audit","100% Ready"],["Compliance","Full"]]},
+    {t:"Turning Payroll Chaos into Operational Confidence",s:"Took over during a crisis. In a month, reviewed end-to-end processes and systems; created troubleshooting playbooks; standardised SOP & documentation; improved configuration.",m:[["Stability","Up"],["Errors","Down"],["Efficiency","Up"]]},
+    {t:"Streamlining Payroll Across Asia-Pacific",s:"Standardised payroll processes and controls across APAC, establishing a regional benchmark for governance and reporting.",m:[["Countries","Multi-region"],["Consistency","High"]]},
+    {t:"Cutting Labour Cost Reporting Time from Days to Minutes",s:"Introduced SQL and automation to reduce labour cost reporting cycle from days to minutes, shifting finance from manual work to decision support.",m:[["Time","Days → Minutes"],["Value","Decision Support"]]},
+    {t:"Automating P&L Variance Monitoring for Real-Time Insights",s:"Built automated P&L variance monitoring; surfaced anomalies in real time and enabled faster corrective action.",m:[["Visibility","Real-time"],["Corrections","Faster"]]},
+    {t:"Delivering Superstream Compliance for 7,000 Employees",s:"Independently delivered Superstream compliance at a large insurance organisation for ~7,000 employees, on time and on budget.",m:[["Employees","~7,000"],["Delivery","On-time/On-budget"]]},
+    {t:"Digitising Timesheets for Speed and Accuracy",s:"Migrated paper timesheets to a digital platform, significantly improving accuracy, transparency and control.",m:[["Accuracy","Up"],["Cycle Time","Down"]]}
+  ];
+  const SUCCESS_ZH=[
+    {t:"三年政府合作项目",s:"与大型政府部门合作三年，建立流程、文档与内控，参与外部审计；从“满足期望”提升至“树立标杆”。",m:[["合作期","3 年"],["审计","100% 就绪"],["合规","全面达标"]]},
+    {t:"从混乱到信心的运营蝶变",s:"在危机期接手，1 个月内审视流程与系统；建立排障手册，标准化作业与文档，优化配置。",m:[["稳定性","提升"],["错误率","下降"],["效率","提升"]]},
+    {t:"标准化亚太区域薪资运营",s:"在 APAC 统一流程与控制，树立区域级薪资治理新标杆。",m:[["覆盖","多国家/地区"],["一致性","高"]]},
+    {t:"把劳动成本报表从“几天”压缩到“分钟”",s:"借助 SQL 与自动化将统计周期从几天缩到分钟，使财务回归决策支持。",m:[["耗时","几天 → 分钟"],["价值","决策支持"]]},
+    {t:"P&L 差异自动监控，实现实时洞察",s:"搭建自动化差异监控，异常实时可见，更快纠偏。",m:[["可视性","实时"],["纠偏速度","更快"]]},
+    {t:"为约 7,000 名员工交付 Superstream 合规",s:"在大型保险机构独立部署 Superstream 合规，按期按预算完成。",m:[["员工数","≈7,000"],["交付","按期/按预算"]]},
+    {t:"工时单数字化，速度与准确性双提升",s:"将纸质工时单迁移至线上平台，显著提升准确性、透明度与可控性。",m:[["准确性","提升"],["周期","缩短"]]}
+  ];
+
+  const NEWS_EN=[
+    {d:"25 Sep 2025",tag:"Industry News",t:"ANZ Payroll Email Blunder Sparks Industry-Wide Concern Over Redundancy Communications",s:"Automated emails mistakenly informed employees of termination before formal communication at ANZ. The incident highlights critical risks in automated HR processes and the need for human oversight.",bullets:["System safeguards must prevent premature communications.","Human review is critical for sensitive decisions.","Clear protocols for redundancy processes are essential."]},
+    {d:"20 May 2025",tag:"Technology",t:"AI and Employment: Challenging the Doomsday Narrative",s:"David Sacks argues that AI fears are overstated. Workers are more likely to lose jobs to AI-proficient colleagues than to AI itself. 'Agentic AI' brings productivity opportunities.",bullets:["Understanding AI tools is now table stakes.","Upskilling and continuous learning are crucial.","AI augments rather than replaces human capabilities."]},
+    {d:"Aug 2025",tag:"Legislation",t:"Australia’s Right to Disconnect Expansion",s:"Small businesses are now covered. Employees can reasonably refuse after-hours contact. Payroll and HR teams should update protocols and train leaders.",bullets:["Define reasonable grounds for after-hours contact.","Align on escalation paths for true emergencies.","Update policy and leadership training."]},
+    {d:"Jul 2025",tag:"Compliance",t:"Superannuation Guarantee Rate Changes",s:"SG rises to 12%. The increase applies by date of payment, not date of work performed. Payroll teams must update systems and verify calculations to avoid underpayment and penalties.",bullets:["Update SG configuration across systems.","Verify pro-rating and rounding behaviour.","Communicate changes to employees and leaders."]}
+  ];
+  const NEWS_ZH=[
+    {d:"2025-09-25",tag:"行业新闻",t:"ANZ 自动化误发裁员邮件引发行业关注",s:"ANZ 因自动化系统误发裁员相关邮件而遭质疑。事件凸显 HR 自动化流程的关键风险与必要的人为把关。",bullets:["设置系统防护，避免过早或错误沟通。","敏感决策必须有人为复核环节。","建立清晰的冗余/裁员沟通与审批流程。"]},
+    {d:"2025-05-20",tag:"技术",t:"AI 与就业：理性看待“末日论”",s:"AI 更可能增强人类而非替代；Agentic AI 释放生产力机会。核心在于提升个人 AI 熟练度与持续学习。",bullets:["理解与应用 AI 工具已是基础能力。","持续学习与技能升级至关重要。","AI 是增效工具而非一刀切的替代。"]},
+    {d:"2025-08",tag:"立法",t:"澳洲“下班不被打扰”权利扩展至小企业",s:"小企业员工同样享有下班后合理拒绝被联系的权利。应更新制度并培训管理者，明确紧急情形与升级路径。",bullets:["定义“合理拒绝”的判定依据与场景。","明确紧急事件的上报/升级路径。","更新政策并培训管理者与团队。"]},
+    {d:"2025-07",tag:"合规",t:"养老金保证（SG）上调至 12%",s:"按支付日期而非工作日期适用。需更新系统并核验计算，避免欠付与处罚，同时向员工与管理者充分告知。",bullets:["在所有系统中更新 SG 配置。","核验分摊与四舍五入规则。","及时对内沟通政策变化与影响。"]}
+  ];
+
+  const TESTS_EN=[
+    {q:"Vivien is a trusted advisor—would recommend without hesitation.",s:"Finance Leader, Wealth Management"},
+    {q:"Great asset to our ADP rollout across 17 locations.",s:"Senior Technology Executive, Industrial"},
+    {q:"Led the payroll team with commercial insight and creativity.",s:"Payroll Team Member, Insurance"},
+    {q:"Professional attitude, technical depth, reliable service.",s:"Senior Finance Leader, Corporate"},
+    {q:"Instrumental in rolling out payroll processes across APAC.",s:"Director, Global Consulting"},
+    {q:"Excellent advances in payroll automation—widely valued.",s:"Regional Finance Leader, Maritime"},
+    {q:"Managed APAC payroll across 11 countries—relationships exceptional.",s:"CFO, Technology"},
+    {q:"Kathy’s leadership and discretion—seamless & reassuring.",s:"CFO, Healthcare"}
+  ];
+  const TESTS_ZH=[
+    {q:"Vivien 是值得信赖的顾问——毫不犹豫地推荐。",s:"财富管理财务负责人"},
+    {q:"为我们 17 个站点的 ADP 上线做出了关键贡献。",s:"工业行业资深技术主管"},
+    {q:"以商业洞察与创意带领薪资团队前进。",s:"保险行业薪资团队成员"},
+    {q:"专业态度、技术深度、服务可靠。",s:"大型企业资深财务负责人"},
+    {q:"推动 APAC 区域的薪资流程落地与扩展。",s:"全球咨询公司总监"},
+    {q:"在薪资自动化方面进展显著，广受好评。",s:"航运业区域财务负责人"},
+    {q:"管理 11 国 APAC 薪资，关系协调能力出色。",s:"科技行业 CFO"},
+    {q:"Kathy 的领导力与审慎，让合作非常安心顺畅。",s:"医疗行业 CFO"}
+  ];
+
+  // ================= Partners（按你 C:\Users\Public\Pictures\partner 现有文件名） =================
+  const PARTNER_BASENAMES = [
+    // 你旧的 6 个系统图：
+    'ADP system picture','Dayforce system picture','Employment hero system picture','Ichris system picture','MicrOpay system picture','Xero system picture',
+    // 你刚加的企业 Logo（文件名见截图）：
+    'AgileJourneys','Aunew','BGIS','Board','CDMA','Ettason','greyhound-victoria','HallChadwick','Meriton','miniSOG','SamsungSDS','TetraTechCoffey','Access'
+  ];
+
+  // ================= 渲染逻辑 =================
+  let lang="zh", route="home", testimonialPage=0;
+  const $ = s=>document.querySelector(s);
+  const main=$("#main"), nav=$("#nav"), langBtn=$("#langBtn"), footerText=$("#footerText");
+  const T=()=>TEXT[lang];
+
+  function renderNav(){
+    const keys=["home","about","services","success","news","testimonials","partners","resources","recruitment","contact","privacy","terms"];
+    nav.innerHTML = keys.map(k=>`<button class="navbtn ${route===k?'active':''}" data-k="${k}">${T().nav[k]}</button>`).join("");
+    nav.querySelectorAll("button").forEach(b=>b.onclick=()=>{route=b.dataset.k; if(route!=='testimonials') testimonialPage=0; render();});
+  }
+  function card(html){return `<div class="card">${html}</div>`;}
+  function section(title,body=""){return `<section class="section"><h2>${title}</h2>${body}</section>`;}
+
+  function home(){
+    const h=T().hero;
+    const cards=h.cards.map(c=>card(`<h3>${c.t}</h3><p class="muted">${c.d}</p>`)).join("");
+    return section(h.title, `<p>${h.subtitle}</p><div class="grid cols-3" style="margin-top:12px">${cards}</div>`);
+  }
+
+  async function about(){
+    const L = lang==="en"?LEADS_EN:LEADS_ZH;
+    const paras=(lang==="en"?ABOUT_EN:ABOUT_ZH).map(p=>`<p>${p}</p>`).join("");
+    const figures=await Promise.all(L.map(async m=>{
+      const ok = await pickImage(m.photoCandidates||[]);
+      const img = ok ? `<img src="${ok}" alt="${m.name}" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;margin-bottom:8px" />` : "";
+      return card(`${img}<div style="font-weight:700">${m.name}</div><div class="muted" style="font-style:italic">${m.title}</div><p style="margin-top:6px">${m.blurb}</p>`);
+    }));
+    return section(T().about.heading, `${paras}<h3 style="margin-top:12px">${T().about.leadership}</h3><div class="grid cols-2" style="margin-top:8px">${figures.join("")}</div>`);
+  }
+
+  async function services(){
+    const S = lang==="en"?SERVICES_EN:SERVICES_ZH;
+    const cardsHtml = await Promise.all(S.map(async s=>{
+      const ok = await pickImage(s.imgCandidates||[]);
+      const fig = ok ? `<div class="service-figure"><img src="${ok}" alt="${s.title}"/></div>` :
+                       `<div class="service-figure"><span class="muted" style="font-size:12px">No image</span></div>`;
+      return card(`<div style="text-align:center">
+          <h3 style="font-size:22px;font-weight:800">${s.title}</h3>
+          <div style="color:var(--blue);font-weight:700;margin-top:6px">${s.sub}</div>
+        </div>
+        ${fig}
+        <ul class="list-check" style="margin-top:10px">${s.bullets.map(b=>`<li>${b}</li>`).join("")}</ul>`);
+    }));
+    return section(T().services.heading, `<div class="grid cols-3">${cardsHtml.join("")}</div>`);
+  }
+
+  function success(){
+    const S = (lang==="en"?SUCCESS_EN:SUCCESS_ZH).map(st=>card(`
+      <h3 style="font-size:20px;font-weight:800">${st.t}</h3>
+      <p class="muted" style="margin-top:8px">${st.s}</p>
+      ${st.m?`<div class="kpi">${st.m.map(([k,v])=>`<div><div class="v">${v}</div><div class="muted" style="font-size:12px">${k}</div></div>`).join("")}</div>`:""}
+    `)).join("");
+    return section(T().success.heading, `<div class="grid cols-2">${S}</div>`);
+  }
+
+  function news(){
+    const N = (lang==="en"?NEWS_EN:NEWS_ZH).map(n=>card(`
+      <div class="muted" style="font-size:12px">${n.d} • ${n.tag}</div>
+      <h3 style="font-size:18px;font-weight:700;margin-top:4px">${n.t}</h3>
+      <p class="muted" style="margin-top:6px">${n.s}</p>
+      ${n.bullets?`<ul class="list-arrow" style="margin-top:8px">${n.bullets.map(b=>`<li>${b}</li>`).join("")}</ul>`:""}
+    `)).join("");
+    return section(T().news.heading, `<div class="grid cols-2">${N}</div>`);
+  }
+
+  function testimonials(){
+    const ALL = (lang==="en"?TESTS_EN:TESTS_ZH);
+    const total = Math.ceil(ALL.length/6);
+    const sub = ALL.slice(testimonialPage*6, testimonialPage*6+6);
+    const C = sub.map(ts=>card(`<blockquote style="font-style:italic">“${ts.q}”</blockquote><div style="margin-top:6px;color:var(--blue);font-weight:700">${ts.s}</div>`)).join("");
+    return section(T().testimonials.heading, `
+      <div class="grid cols-3">${C}</div>
+      ${total>1?`<div class="center" style="gap:8px;margin-top:12px">
+        <button class="btn" ${testimonialPage===0?"disabled":""} onclick="testimonialPage=Math.max(0,testimonialPage-1);render()">${T().btn.prev}</button>
+        <span class="muted" style="font-size:14px">${testimonialPage+1} / ${total}</span>
+        <button class="btn" ${testimonialPage>=total-1?"disabled":""} onclick="testimonialPage=Math.min(${total-1},testimonialPage+1);render()">${T().btn.next}</button>
+      </div>`:""}
+    `);
+  }
+
+  async function partners(){
+    // 为每个 basename 生成候选路径并选中第一个能加载的
+    const rows = await Promise.all(PARTNER_BASENAMES.map(async (name)=>{
+      const candidates = [`${BASE}/partner/${name}`]; // 无后缀; pickImage 会自动补扩展名
+      const url = await pickImage(candidates);
+      if(url){
+        return `<div class="card center partners cell"><img src="${url}" alt="${name} logo"/></div>`;
+      }
+      const hint = `${BASE.replace('file:///','')}\\partner\\${name}.[png|jpg|jpeg|webp]`;
+      return `<div class="card center partners cell"><div class="muted" style="font-size:12px;text-align:center">${name}<br/><span class="inline-note">${hint}</span></div></div>`;
+    }));
+    return section(T().partners.heading, `<div class="grid cols-4">${rows.join("")}</div>
+      <p class="inline-note" style="margin-top:8px">图片来自 <code>C:\\Users\\Public\\Pictures\\partner\\</code>；若看不到，请核对文件名和扩展名。</p>`);
+  }
+
+  function resources(){
+    const S = (lang==="en"?SUPPORT_EN:SUPPORT_ZH);
+    const cards = S.map((s,i)=>card(`
+      <h3 style="font-size:18px;font-weight:700">${s.t}</h3>
+      <p class="muted" style="margin-top:6px">${s.intro}</p>
+      <div style="margin-top:6px">${s.tags.map(x=>`<span class="pill">${x}</span>`).join("")}</div>
+      <button class="btn" style="margin-top:10px" onclick="toggle(${i})" id="btn${i}">${T().btn.expand}</button>
+      <ul id="ul${i}" class="list-check" style="margin-top:8px;display:none">${s.items.map(it=>`<li>${it}</li>`).join("")}</ul>
+    `)).join("");
+    return section(T().resources.support, `<div class="grid cols-3">${cards}</div>`);
+  }
+  function toggle(i){
+    const ul=document.getElementById('ul'+i),btn=document.getElementById('btn'+i);
+    const open=ul.style.display!=="none"; ul.style.display=open?"none":"block";
+    btn.textContent=open?T().btn.expand:T().btn.collapse;
+  }
+
+  function recruitment(){
+    const J=(lang==="en"?JOBS_EN:JOBS_ZH).map(j=>`<li><strong>${j.r}</strong>（${j.type}）— ${j.d}</li>`).join("");
+    return section(T().recruitment.heading, `<p>${T().recruitment.intro}</p><ul style="margin-top:6px">${J}</ul>`);
+  }
+  function contact(){
+    const f=T().contact.form;
+    return section(T().contact.heading, `<p>${T().contact.intro}</p>
+      <div class="card" style="margin-top:10px">
+        <div style="display:grid;gap:8px">
+          <input placeholder="${f.name}" style="padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff"/>
+          <input placeholder="${f.email}" style="padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff"/>
+          <textarea placeholder="${f.msg}" rows="4" style="padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff"></textarea>
+          <button class="btn" onclick="alert('Submitted')">${f.submit}</button>
+        </div>
+      </div>`);
+  }
+  function simple(key){const X=T()[key]; return section(X.heading, `<p class="muted">${X.body}</p>`);}
+
+  async function render(){
+    renderNav();
+    const map={home:home,about:about,services:services,success:success,news:news,testimonials:testimonials,partners:partners,resources:resources,recruitment:recruitment,contact:contact,privacy:()=>simple('privacy'),terms:()=>simple('terms')};
+    const html = await map[route]();
+    document.getElementById('main').innerHTML = html;
+    document.getElementById('footerText').textContent = `${T().brand} © ${new Date().getFullYear()} ${T().footer.rights}`;
+    document.title = `${T().brand} — ${T().nav[route]}`;
+  }
+
+  // 初始化
+  document.getElementById('langBtn').onclick=()=>{
+    lang=(lang==="en"?"zh":"en");
+    document.getElementById('langBtn').textContent=(lang==="en"?"中文":"EN");
+    render();
+  };
+  (async ()=>{ await render(); })();
+  </script>
+</body>
+</html>
